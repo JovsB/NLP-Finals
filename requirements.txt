@@ -1,0 +1,16 @@
+Flask==2.3.2
+Flask-Cors==4.0.0
+Flask-Bootstrap==3.3.7.1
+
+nltk==3.8.1
+textblob==0.17.1
+spacy==3.7.2
+scikit-learn==1.4.2
+pandas==2.2.2
+numpy==1.26.4
+
+transformers==4.40.1
+torch==2.3.0
+tensorflow==2.15.0
+
+joblib==1.4.2
