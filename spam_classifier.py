@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 # config
-DATA_PATH = 'models/spam.csv'
+DATA_PATH = 'dataset/spam.csv'
 PIPELINE_PATH = 'models/full_spam_pipeline.joblib'
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
