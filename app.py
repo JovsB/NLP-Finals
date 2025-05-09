@@ -4,11 +4,11 @@ app = Flask(__name__)
 
 @app.route('/redirect')
 def redirect_to_index():
-    return redirect(url_for('index'))  # Redirects to the 'index' route
+    return redirect(url_for('index'))  
 
 @app.route('/index')
 def index():
-    return render_template('index.html')  # Renders the 'index.html' template
+    return render_template('index.html') 
 
 if __name__ == '__main__':
     app.run(debug=True)
