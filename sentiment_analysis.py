@@ -69,33 +69,6 @@ def load_nltk_twitter_samples():
     print(f"Loaded {len(texts)} documents from NLTK twitter_samples.")
     return list(texts), list(labels)
 
-def load_sample_custom_data():
-    """Loads a small sample custom dataset. 
-    In a real scenario, this function would load data from a file (CSV, JSON, etc.) 
-    or another source.
-    Labels must be 'pos' or 'neg' for the current model.
-    """
-    print("Loading sample custom data...")
-    custom_data = [
-        ("This is a truly wonderful experience, I am so happy!", "pos"),
-        ("I'm very pleased with the outcome.", "pos"),
-        ("This is fantastic news!", "pos"),
-        ("What a terrible situation, I'm really upset.", "neg"),
-        ("I am extremely disappointed with this product.", "neg"),
-        ("This is just awful.", "neg"),
-        ("The service was exceptional, highly recommended.", "pos"),
-        ("A complete waste of time and money.", "neg"),
-        ("I couldn't be happier with the results.", "pos"),
-        ("The quality is shockingly bad.", "neg"),
-        ("It's an okay product, nothing special.", "neg"), 
-        ("The book was quite engaging for the most part.", "pos") 
-    ]
-    random.shuffle(custom_data)
-    texts = [text for text, label in custom_data]
-    labels = [label for text, label in custom_data]
-    print(f"Loaded {len(texts)} documents from sample custom data.")
-    return texts, labels
-
 def load_and_prepare_all_data():
     """Loads and prepares data from all configured sources."""
     print("Loading and preparing all data sources for training...")
@@ -112,22 +85,6 @@ def load_and_prepare_all_data():
     nltk_texts_tweets, nltk_labels_tweets = load_nltk_twitter_samples()
     all_texts.extend(nltk_texts_tweets)
     all_labels.extend(nltk_labels_tweets)
-
-    # Load from sample custom data (OPTIONAL)
-    # If you have your own data, you can enable this section.
-    # Make sure load_sample_custom_data() is implemented to load your data.
-    # print("Attempting to load custom data (if enabled)...")
-    # try:
-    #     custom_texts, custom_labels = load_sample_custom_data()
-    #     if custom_texts and custom_labels:
-    #         all_texts.extend(custom_texts)
-    #         all_labels.extend(custom_labels)
-    #         print(f"Successfully added {len(custom_texts)} custom documents.")
-    #     else:
-    #         print("Custom data loading skipped or returned empty.")
-    # except Exception as e:
-    #     print(f"Error loading custom data: {e}. Skipping custom data.")
-    # --- End of OPTIONAL custom data section ---
     
     # Shuffle the combined dataset
     if all_texts and all_labels:
@@ -277,19 +234,3 @@ if __name__ == "__main__":
             print(f"Error during analysis: {e}")
             print("This might happen if the model classes are unexpected. Consider retraining.")
 
-    # Example texts for testing (can be uncommented)
-    # print("\n--- Example Texts (with scores) ---")
-    # texts_to_test = [
-    #     "This movie was absolutely fantastic, a true masterpiece!",
-    #     "I hated every moment of that film. It was a disaster.",
-    #     "The acting was okay, but the plot was a bit predictable.",
-    #     "It's a film.",
-    #     "I'm not really sure what to think about this movie yet.",
-    #     "The product is average, neither good nor bad.",
-    #     "I am incredibly happy with this purchase!",
-    #     "This is the worst decision I have ever made.",
-    #     "This is one of the best coffee I've ever tasted!"
-    # ]
-    # for t in texts_to_test:
-    #     analysis_result = analyzer.analyze_sentiment(t)
-    #     print(f"Text: '{t}' -> Label: {analysis_result['label']}, Pos: {analysis_result['positive_score']:.0%}, Neg: {analysis_result['negative_score']:.0%}")
