@@ -8,6 +8,7 @@ import joblib
 import os
 import numpy as np
 
+nltk.download('movie_reviews')
 # --- Model and Data Configuration ---
 MODEL_DIR = "models"
 MODEL_FILENAME = "sentiment_model_nltk_reviews.joblib"
