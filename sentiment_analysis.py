@@ -124,7 +124,8 @@ class SentimentAnalyzer:
     def __init__(self, model_path=MODEL_PATH):
         self.model_path = model_path
         self.model = self._load_model()
-        self.UNCERTAIN_THRESHOLD = 0.65 
+        self.UNCERTAIN_THRESHOLD = 0.60
+        self.MIN_ACTIVATION_THRESHOLD = 0.55
         self.NEUTRAL_MARGIN = 0.2     
 
     def _load_model(self):
@@ -179,13 +180,20 @@ class SentimentAnalyzer:
             
         max_proba = max(pos_proba, neg_proba)
 
-        if max_proba < self.UNCERTAIN_THRESHOLD:
+        if pos_proba > neg_proba and pos_proba >= self.MIN_ACTIVATION_THRESHOLD:
+            label = "Positive"
+        elif neg_proba > pos_proba and neg_proba >= self.MIN_ACTIVATION_THRESHOLD:
+            label = "Negative"
+        # If neither of the above specific conditions for P/N are met,
+        # then check for Neutral conditions based on general uncertainty or narrow margin.
+        elif max_proba < self.UNCERTAIN_THRESHOLD:
             label = "Neutral"
         elif abs(pos_proba - neg_proba) < self.NEUTRAL_MARGIN:
             label = "Neutral"
+        # Fallback if not strongly P/N and not clearly Neutral by the above rules
         elif pos_proba > neg_proba:
             label = "Positive"
-        else:
+        else: # neg_proba >= pos_proba
             label = "Negative"
         
         return {
