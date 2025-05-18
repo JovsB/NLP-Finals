@@ -156,17 +156,13 @@ def train_sentiment_model(X_texts, y_labels):
 class SentimentAnalyzer:
     """
     A class to perform sentiment analysis using a trained model.
-    Classifies text into Positive, Negative, or Neutral.
+    Classifies text into Positive, Negative, or Neutral and provides confidence scores.
     """
     def __init__(self, model_path=MODEL_PATH):
         self.model_path = model_path
         self.model = self._load_model()
-        # Define thresholds for Neutral classification
-        # If max probability is below UNCERTAIN_THRESHOLD, or if the difference
-        # between positive and negative probabilities is below NEUTRAL_MARGIN,
-        # classify as Neutral.
-        self.UNCERTAIN_THRESHOLD = 0.65 # Min confidence for a clear Positive/Negative
-        self.NEUTRAL_MARGIN = 0.2     # Max difference between pos/neg probabilities for Neutral
+        self.UNCERTAIN_THRESHOLD = 0.65 
+        self.NEUTRAL_MARGIN = 0.2     
 
     def _load_model(self):
         """Loads the trained model from disk. Trains a new one if not found."""
@@ -175,57 +171,65 @@ class SentimentAnalyzer:
             return joblib.load(self.model_path)
         else:
             print("No pre-trained model found. Training a new one...")
-            download_nltk_resources() # Ensure data is available
+            download_nltk_resources()
             X_texts, y_labels = load_and_prepare_all_data()
+            if not X_texts:
+                raise ValueError("No training data loaded. Cannot train model.")
             return train_sentiment_model(X_texts, y_labels)
 
-    def analyze_sentiment(self, text: str) -> str:
+    def analyze_sentiment(self, text: str) -> dict:
         """
-        Analyzes the sentiment of a given text.
+        Analyzes the sentiment of a given text and returns the label and scores.
 
         Args:
             text: The input string to analyze.
 
         Returns:
-            A string indicating the sentiment: "Positive", "Negative", or "Neutral".
+            A dictionary with keys: "label" (str), "positive_score" (float),
+            "negative_score" (float).
+            Example: {"label": "Positive", "positive_score": 0.9, "negative_score": 0.1}
         """
         if not isinstance(text, str):
             raise TypeError("Input text must be a string.")
-        if not text.strip():
-            return "Neutral" # Empty or whitespace-only strings are Neutral
+        
+        label = "Neutral" # Default to Neutral
+        pos_proba = 0.0
+        neg_proba = 0.0
 
-        # The model expects a list of documents
+        if not text.strip(): # Empty or whitespace-only strings
+            return {"label": "Neutral", "positive_score": 0.0, "negative_score": 0.0}
+
         prediction_proba = self.model.predict_proba([text])[0]
         
-        # Get probabilities for 'neg' and 'pos' classes
-        # The order of classes depends on how they were learned.
-        # We find the indices for 'pos' and 'neg' from model.classes_
-        neg_proba = 0.0
-        pos_proba = 0.0
-
         classes = list(self.model.classes_)
         try:
             neg_idx = classes.index("neg")
             neg_proba = prediction_proba[neg_idx]
         except ValueError:
-            print("Warning: 'neg' class not found in model.")
+            print("Warning: 'neg' class not found in model. Scores might be inaccurate.")
 
         try:
             pos_idx = classes.index("pos")
             pos_proba = prediction_proba[pos_idx]
         except ValueError:
-            print("Warning: 'pos' class not found in model.")
+            print("Warning: 'pos' class not found in model. Scores might be inaccurate.")
             
         max_proba = max(pos_proba, neg_proba)
 
         if max_proba < self.UNCERTAIN_THRESHOLD:
-            return "Neutral"
+            label = "Neutral"
         elif abs(pos_proba - neg_proba) < self.NEUTRAL_MARGIN:
-            return "Neutral"
+            label = "Neutral"
         elif pos_proba > neg_proba:
-            return "Positive"
+            label = "Positive"
         else:
-            return "Negative"
+            label = "Negative"
+        
+        return {
+            "label": label,
+            "positive_score": round(pos_proba, 4), # Rounded for readability
+            "negative_score": round(neg_proba, 4)
+        }
 
     def retrain_model(self):
         """Forces retraining of the model."""
@@ -238,8 +242,7 @@ class SentimentAnalyzer:
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    download_nltk_resources() # Ensure resources are ready if model needs training
-    
+    download_nltk_resources()
     analyzer = SentimentAnalyzer()
 
     print("\n--- Sentiment Analysis CLI ---")
@@ -247,7 +250,7 @@ if __name__ == "__main__":
     print("Type 'retrain' to force model retraining.")
 
     while True:
-        user_input = input("Enter text to analyze: ")
+        user_input = input("\nEnter text to analyze: ")
         if user_input.lower() in ["quit", "exit"]:
             print("Exiting sentiment analyzer.")
             break
@@ -256,18 +259,20 @@ if __name__ == "__main__":
             continue
         
         if not user_input.strip():
-            print("Sentiment: Neutral (empty input)")
+            print("Sentiment: Neutral (empty input), Positive Score: 0.0, Negative Score: 0.0")
             continue
 
         try:
-            sentiment = analyzer.analyze_sentiment(user_input)
-            print(f"Sentiment: {sentiment}")
+            result = analyzer.analyze_sentiment(user_input)
+            print(f"Sentiment: {result['label']}")
+            print(f"  Positive Score: {result['positive_score']:.2%}") # Display as percentage
+            print(f"  Negative Score: {result['negative_score']:.2%}")
         except Exception as e:
             print(f"Error during analysis: {e}")
             print("This might happen if the model classes are unexpected. Consider retraining.")
 
-    # Example texts for testing
-    # print("\n--- Example Texts ---")
+    # Example texts for testing (can be uncommented)
+    # print("\n--- Example Texts (with scores) ---")
     # texts_to_test = [
     #     "This movie was absolutely fantastic, a true masterpiece!",
     #     "I hated every moment of that film. It was a disaster.",
@@ -276,7 +281,9 @@ if __name__ == "__main__":
     #     "I'm not really sure what to think about this movie yet.",
     #     "The product is average, neither good nor bad.",
     #     "I am incredibly happy with this purchase!",
-    #     "This is the worst decision I have ever made."
+    #     "This is the worst decision I have ever made.",
+    #     "This is one of the best coffee I've ever tasted!"
     # ]
     # for t in texts_to_test:
-    #     print(f"Text: '{t}' -> Sentiment: {analyzer.analyze_sentiment(t)}")
+    #     analysis_result = analyzer.analyze_sentiment(t)
+    #     print(f"Text: '{t}' -> Label: {analysis_result['label']}, Pos: {analysis_result['positive_score']:.0%}, Neg: {analysis_result['negative_score']:.0%}")
