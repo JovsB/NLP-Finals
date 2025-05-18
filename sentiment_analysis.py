@@ -8,7 +8,6 @@ import joblib
 import os
 import numpy as np
 
-nltk.download('movie_reviews')
 # --- Model and Data Configuration ---
 MODEL_DIR = "models"
 MODEL_FILENAME = "sentiment_model_nltk_reviews.joblib"
@@ -17,21 +16,27 @@ MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
 # --- NLTK Resource Download ---
 def download_nltk_resources():
     """Downloads necessary NLTK resources if not already present."""
-    try:
-        nltk.data.find("corpora/movie_reviews")
-    except nltk.downloader.DownloadError:
-        print("Downloading NLTK movie_reviews corpus...")
-        nltk.download("movie_reviews")
-    try:
-        nltk.data.find("tokenizers/punkt")
-    except nltk.downloader.DownloadError:
-        print("Downloading NLTK punkt tokenizer...")
-        nltk.download("punkt")
-    try:
-        nltk.data.find("corpora/twitter_samples.zip")
-    except nltk.downloader.DownloadError:
-        print("Downloading NLTK twitter_samples corpus...")
-        nltk.download("twitter_samples")
+    resources_to_check = [
+        ("corpora/movie_reviews", "movie_reviews"),
+        ("tokenizers/punkt", "punkt"),
+        ("corpora/twitter_samples.zip", "twitter_samples") # NLTK often looks for the .zip for corpora
+    ]
+
+    for resource_path, resource_name in resources_to_check:
+        try:
+            nltk.data.find(resource_path)
+            print(f"NLTK resource '{resource_name}' found.")
+        except LookupError: # Changed from nltk.downloader.DownloadError to LookupError
+            print(f"NLTK resource '{resource_name}' not found. Downloading...")
+            try:
+                nltk.download(resource_name, quiet=True) # Added quiet=True for cleaner output on success
+                print(f"Successfully downloaded NLTK resource '{resource_name}'.")
+                # A brief verification after download attempt
+                nltk.data.find(resource_path)
+                print(f"NLTK resource '{resource_name}' verified after download.")
+            except Exception as e: # Catch any error during download
+                print(f"Error downloading NLTK resource '{resource_name}': {e}")
+                print(f"Please try manually: import nltk; nltk.download('{resource_name}')")
 
 # --- Data Preparation ---
 def load_nltk_movie_reviews():
@@ -64,33 +69,6 @@ def load_nltk_twitter_samples():
     print(f"Loaded {len(texts)} documents from NLTK twitter_samples.")
     return list(texts), list(labels)
 
-def load_sample_custom_data():
-    """Loads a small sample custom dataset. 
-    In a real scenario, this function would load data from a file (CSV, JSON, etc.) 
-    or another source.
-    Labels must be 'pos' or 'neg' for the current model.
-    """
-    print("Loading sample custom data...")
-    custom_data = [
-        ("This is a truly wonderful experience, I am so happy!", "pos"),
-        ("I'm very pleased with the outcome.", "pos"),
-        ("This is fantastic news!", "pos"),
-        ("What a terrible situation, I'm really upset.", "neg"),
-        ("I am extremely disappointed with this product.", "neg"),
-        ("This is just awful.", "neg"),
-        ("The service was exceptional, highly recommended.", "pos"),
-        ("A complete waste of time and money.", "neg"),
-        ("I couldn't be happier with the results.", "pos"),
-        ("The quality is shockingly bad.", "neg"),
-        ("It's an okay product, nothing special.", "neg"), 
-        ("The book was quite engaging for the most part.", "pos") 
-    ]
-    random.shuffle(custom_data)
-    texts = [text for text, label in custom_data]
-    labels = [label for text, label in custom_data]
-    print(f"Loaded {len(texts)} documents from sample custom data.")
-    return texts, labels
-
 def load_and_prepare_all_data():
     """Loads and prepares data from all configured sources."""
     print("Loading and preparing all data sources for training...")
@@ -107,22 +85,6 @@ def load_and_prepare_all_data():
     nltk_texts_tweets, nltk_labels_tweets = load_nltk_twitter_samples()
     all_texts.extend(nltk_texts_tweets)
     all_labels.extend(nltk_labels_tweets)
-
-    # Load from sample custom data (OPTIONAL)
-    # If you have your own data, you can enable this section.
-    # Make sure load_sample_custom_data() is implemented to load your data.
-    # print("Attempting to load custom data (if enabled)...")
-    # try:
-    #     custom_texts, custom_labels = load_sample_custom_data()
-    #     if custom_texts and custom_labels:
-    #         all_texts.extend(custom_texts)
-    #         all_labels.extend(custom_labels)
-    #         print(f"Successfully added {len(custom_texts)} custom documents.")
-    #     else:
-    #         print("Custom data loading skipped or returned empty.")
-    # except Exception as e:
-    #     print(f"Error loading custom data: {e}. Skipping custom data.")
-    # --- End of OPTIONAL custom data section ---
     
     # Shuffle the combined dataset
     if all_texts and all_labels:
@@ -157,17 +119,13 @@ def train_sentiment_model(X_texts, y_labels):
 class SentimentAnalyzer:
     """
     A class to perform sentiment analysis using a trained model.
-    Classifies text into Positive, Negative, or Neutral.
+    Classifies text into Positive, Negative, or Neutral and provides confidence scores.
     """
     def __init__(self, model_path=MODEL_PATH):
         self.model_path = model_path
         self.model = self._load_model()
-        # Define thresholds for Neutral classification
-        # If max probability is below UNCERTAIN_THRESHOLD, or if the difference
-        # between positive and negative probabilities is below NEUTRAL_MARGIN,
-        # classify as Neutral.
-        self.UNCERTAIN_THRESHOLD = 0.65 # Min confidence for a clear Positive/Negative
-        self.NEUTRAL_MARGIN = 0.2     # Max difference between pos/neg probabilities for Neutral
+        self.UNCERTAIN_THRESHOLD = 0.65 
+        self.NEUTRAL_MARGIN = 0.2     
 
     def _load_model(self):
         """Loads the trained model from disk. Trains a new one if not found."""
@@ -176,57 +134,65 @@ class SentimentAnalyzer:
             return joblib.load(self.model_path)
         else:
             print("No pre-trained model found. Training a new one...")
-            download_nltk_resources() # Ensure data is available
+            download_nltk_resources()
             X_texts, y_labels = load_and_prepare_all_data()
+            if not X_texts:
+                raise ValueError("No training data loaded. Cannot train model.")
             return train_sentiment_model(X_texts, y_labels)
 
-    def analyze_sentiment(self, text: str) -> str:
+    def analyze_sentiment(self, text: str) -> dict:
         """
-        Analyzes the sentiment of a given text.
+        Analyzes the sentiment of a given text and returns the label and scores.
 
         Args:
             text: The input string to analyze.
 
         Returns:
-            A string indicating the sentiment: "Positive", "Negative", or "Neutral".
+            A dictionary with keys: "label" (str), "positive_score" (float),
+            "negative_score" (float).
+            Example: {"label": "Positive", "positive_score": 0.9, "negative_score": 0.1}
         """
         if not isinstance(text, str):
             raise TypeError("Input text must be a string.")
-        if not text.strip():
-            return "Neutral" # Empty or whitespace-only strings are Neutral
+        
+        label = "Neutral" # Default to Neutral
+        pos_proba = 0.0
+        neg_proba = 0.0
 
-        # The model expects a list of documents
+        if not text.strip(): # Empty or whitespace-only strings
+            return {"label": "Neutral", "positive_score": 0.0, "negative_score": 0.0}
+
         prediction_proba = self.model.predict_proba([text])[0]
         
-        # Get probabilities for 'neg' and 'pos' classes
-        # The order of classes depends on how they were learned.
-        # We find the indices for 'pos' and 'neg' from model.classes_
-        neg_proba = 0.0
-        pos_proba = 0.0
-
         classes = list(self.model.classes_)
         try:
             neg_idx = classes.index("neg")
             neg_proba = prediction_proba[neg_idx]
         except ValueError:
-            print("Warning: 'neg' class not found in model.")
+            print("Warning: 'neg' class not found in model. Scores might be inaccurate.")
 
         try:
             pos_idx = classes.index("pos")
             pos_proba = prediction_proba[pos_idx]
         except ValueError:
-            print("Warning: 'pos' class not found in model.")
+            print("Warning: 'pos' class not found in model. Scores might be inaccurate.")
             
         max_proba = max(pos_proba, neg_proba)
 
         if max_proba < self.UNCERTAIN_THRESHOLD:
-            return "Neutral"
+            label = "Neutral"
         elif abs(pos_proba - neg_proba) < self.NEUTRAL_MARGIN:
-            return "Neutral"
+            label = "Neutral"
         elif pos_proba > neg_proba:
-            return "Positive"
+            label = "Positive"
         else:
-            return "Negative"
+            label = "Negative"
+        
+        return {
+            "label": label,
+            "positive_score": round(pos_proba, 4), # Rounded for readability
+            "negative_score": round(neg_proba, 4)
+        }
 
     def retrain_model(self):
         """Forces retraining of the model."""
@@ -239,8 +205,7 @@ class SentimentAnalyzer:
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    download_nltk_resources() # Ensure resources are ready if model needs training
-    
+    download_nltk_resources()
     analyzer = SentimentAnalyzer()
 
     print("\n--- Sentiment Analysis CLI ---")
@@ -248,7 +213,7 @@ if __name__ == "__main__":
     print("Type 'retrain' to force model retraining.")
 
     while True:
-        user_input = input("Enter text to analyze: ")
+        user_input = input("\nEnter text to analyze: ")
         if user_input.lower() in ["quit", "exit"]:
             print("Exiting sentiment analyzer.")
             break
@@ -257,27 +222,15 @@ if __name__ == "__main__":
             continue
         
         if not user_input.strip():
-            print("Sentiment: Neutral (empty input)")
+            print("Sentiment: Neutral (empty input), Positive Score: 0.0, Negative Score: 0.0")
             continue
 
         try:
-            sentiment = analyzer.analyze_sentiment(user_input)
-            print(f"Sentiment: {sentiment}")
+            result = analyzer.analyze_sentiment(user_input)
+            print(f"Sentiment: {result['label']}")
+            print(f"  Positive Score: {result['positive_score']:.2%}") # Display as percentage
+            print(f"  Negative Score: {result['negative_score']:.2%}")
         except Exception as e:
             print(f"Error during analysis: {e}")
             print("This might happen if the model classes are unexpected. Consider retraining.")
 
-    # Example texts for testing
-    # print("\n--- Example Texts ---")
-    # texts_to_test = [
-    #     "This movie was absolutely fantastic, a true masterpiece!",
-    #     "I hated every moment of that film. It was a disaster.",
-    #     "The acting was okay, but the plot was a bit predictable.",
-    #     "It's a film.",
-    #     "I'm not really sure what to think about this movie yet.",
-    #     "The product is average, neither good nor bad.",
-    #     "I am incredibly happy with this purchase!",
-    #     "This is the worst decision I have ever made."
-    # ]
-    # for t in texts_to_test:
-    #     print(f"Text: '{t}' -> Sentiment: {analyzer.analyze_sentiment(t)}")
