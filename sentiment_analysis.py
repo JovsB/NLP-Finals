@@ -8,7 +8,6 @@ import joblib
 import os
 import numpy as np
 
-nltk.download('movie_reviews')
 # --- Model and Data Configuration ---
 MODEL_DIR = "models"
 MODEL_FILENAME = "sentiment_model_nltk_reviews.joblib"
@@ -17,21 +16,27 @@ MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILENAME)
 # --- NLTK Resource Download ---
 def download_nltk_resources():
     """Downloads necessary NLTK resources if not already present."""
-    try:
-        nltk.data.find("corpora/movie_reviews")
-    except nltk.downloader.DownloadError:
-        print("Downloading NLTK movie_reviews corpus...")
-        nltk.download("movie_reviews")
-    try:
-        nltk.data.find("tokenizers/punkt")
-    except nltk.downloader.DownloadError:
-        print("Downloading NLTK punkt tokenizer...")
-        nltk.download("punkt")
-    try:
-        nltk.data.find("corpora/twitter_samples.zip")
-    except nltk.downloader.DownloadError:
-        print("Downloading NLTK twitter_samples corpus...")
-        nltk.download("twitter_samples")
+    resources_to_check = [
+        ("corpora/movie_reviews", "movie_reviews"),
+        ("tokenizers/punkt", "punkt"),
+        ("corpora/twitter_samples.zip", "twitter_samples") # NLTK often looks for the .zip for corpora
+    ]
+
+    for resource_path, resource_name in resources_to_check:
+        try:
+            nltk.data.find(resource_path)
+            print(f"NLTK resource '{resource_name}' found.")
+        except LookupError: # Changed from nltk.downloader.DownloadError to LookupError
+            print(f"NLTK resource '{resource_name}' not found. Downloading...")
+            try:
+                nltk.download(resource_name, quiet=True) # Added quiet=True for cleaner output on success
+                print(f"Successfully downloaded NLTK resource '{resource_name}'.")
+                # A brief verification after download attempt
+                nltk.data.find(resource_path)
+                print(f"NLTK resource '{resource_name}' verified after download.")
+            except Exception as e: # Catch any error during download
+                print(f"Error downloading NLTK resource '{resource_name}': {e}")
+                print(f"Please try manually: import nltk; nltk.download('{resource_name}')")
 
 # --- Data Preparation ---
 def load_nltk_movie_reviews():
