@@ -202,6 +202,27 @@ class SentimentAnalyzer:
         self.model = train_sentiment_model(X_texts, y_labels)
         print("Model retraining complete.")
 
+def analyze_sentiment(sentences: list[str]):
+    analyzer = SentimentAnalyzer()
+    
+    average_positive_score = 0
+
+    for sentence in sentences:
+        result = analyzer.analyze_sentiment(sentence)
+        average_positive_score += float(result['positive_score'])
+        
+    average_positive_score /= len(sentence)
+    
+    if average_positive_score > 0.5:
+        remark = 'positive'
+    
+    elif average_positive_score == 0.5:
+        remark = 'neutral'
+        
+    else:
+        remark = 'negative'
+        
+    return remark, average_positive_score
 
 # --- Main Execution ---
 if __name__ == "__main__":
@@ -233,4 +254,3 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error during analysis: {e}")
             print("This might happen if the model classes are unexpected. Consider retraining.")
-

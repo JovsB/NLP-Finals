@@ -3,6 +3,9 @@ from flask_cors import CORS, cross_origin
 from operator import itemgetter
 
 from test_spam import detect_spam
+from toxicity_detection import detect_toxicity
+from sentiment_analysis import analyze_sentiment, download_nltk_resources
+
 from utils import split_sentences
 
 from lib.pyModels import TextCleaner, NumericFeatures # NOTE: DO NOT REMOVE THIS!!! SPAM WILL NOT WORK OTHERWISE
@@ -27,8 +30,27 @@ def index():
                 'count': spam_count
             }
         })
+        
+    if use_toxicity:
+        toxicity_results, toxicity_count = detect_toxicity(sentences)
+        results.update({
+            'toxicity': {
+                'results': toxicity_results,
+                'count': toxicity_count
+            }
+        })
+    
+    if use_sentiment:
+        sentiment_remark, average_score = analyze_sentiment(sentences)
+        results.update({
+            'sentiment': {
+                'remark': sentiment_remark,
+                'confidence': average_score
+            }
+        })
     
     return jsonify(results)
 
 if __name__ == '__main__':
+    download_nltk_resources()
     app.run(debug=True)
