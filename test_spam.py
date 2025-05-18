@@ -32,15 +32,9 @@ class NumericFeatures(BaseEstimator, TransformerMixin):
         has_free = np.array([1 if 'free' in text.lower() else 0 for text in X]).reshape(-1, 1)
         return np.hstack([exclaim_count, has_free])
 
-# --- Load pipeline ---
-PIPELINE_PATH = 'models/full_spam_pipeline.joblib'
-THRESHOLD = 0.6
-
-print("Loading pipeline...")
-pipeline = joblib.load(PIPELINE_PATH)
 
 # --- Define prediction function ---
-def predict_spam(texts, pipeline, threshold=THRESHOLD):
+def predict_spam(texts, pipeline, threshold=0.6):
     if isinstance(texts, str):
         texts = [texts]   
     probas = pipeline.predict_proba(texts)[:, 1]   
@@ -50,23 +44,40 @@ def predict_spam(texts, pipeline, threshold=THRESHOLD):
         predictions.append({
             "text": text,
             "spam_probability": round(proba, 4),
-            "prediction": label
+            "prediction": label,
+            "is_spam": proba >= threshold
         })
+        
     return predictions
 
- 
-sample_texts = [
-    "Congratulations! You won a free ticket to Bahamas! Call now!",
-    "Hi John, just checking in to see how you're doing.",
-    "Claim your FREE reward by clicking this link!",
-    "I'll be late to the meeting. Traffic is heavy.",
-    "You have been selected for a cash prize. Act fast!"
-]
 
-results = predict_spam(sample_texts, pipeline)
+# Add function for API
+def detect_spam(texts: list[str]):
+    pipeline = joblib.load('models/full_spam_pipeline.joblib')
 
-print("\n--- Spam Prediction Results ---")
-for res in results:
-    print(f"\nMessage: {res['text']}")
-    print(f"→ Spam Probability: {res['spam_probability']}")
-    print(f"→ Predicted Label: {res['prediction']}")
+    results = predict_spam(texts, pipeline)
+    spam_count = len([r for r in results if r['is_spam']])
+    
+    return results, spam_count
+
+if __name__ == '__main__':
+    # --- Load pipeline ---
+    print("Loading pipeline...")
+    pipeline = joblib.load('models/full_spam_pipeline.joblib')
+
+    sample_texts = [
+        "Congratulations! You won a free ticket to Bahamas! Call now!",
+        "Hi John, just checking in to see how you're doing.",
+        "Claim your FREE reward by clicking this link!",
+        "I'll be late to the meeting. Traffic is heavy.",
+        "You have been selected for a cash prize. Act fast!",
+        "Full discounts available! Go to https://definitelyspam.io to learn more."
+    ]
+
+    results = predict_spam(sample_texts, pipeline)
+
+    print("\n--- Spam Prediction Results ---")
+    for res in results:
+        print(f"\nMessage: {res['text']}")
+        print(f"→ Spam Probability: {res['spam_probability']}")
+        print(f"→ Predicted Label: {res['prediction']}")
