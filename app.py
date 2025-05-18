@@ -1,14 +1,31 @@
-from flask import Flask, render_template, redirect, url_for
+from flask import Flask, request, jsonify
+from flask_cors import CORS, cross_origin
+from operator import itemgetter
+
+from test_spam import detect_spam
+from utils import split_sentences
 
 app = Flask(__name__)
+CORS(app)
 
-@app.route('/redirect')
-def redirect_to_index():
-    return redirect(url_for('index'))  
-
-@app.route('/index')
+@app.route('/', methods=['POST'])
+@cross_origin(origin='http://localhost:3000')
 def index():
-    return render_template('index.html') 
+    data = request.json
+    text, use_spam, use_toxicity, use_sentiment = itemgetter('text', 'useSpam', 'useToxicity', 'useSentiment')(data)
+    
+    sentences = split_sentences(text)
+    results = {}
+    
+    if use_spam:
+        spam_results, spam_count = detect_spam(sentences)
+        results.update({
+            'spam': {
+                'results': spam_results,
+                'count': spam_count
+            }
+        })
+    
+    return jsonify(results)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+app.run(debug=True)
