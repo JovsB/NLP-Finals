@@ -5,6 +5,8 @@ from operator import itemgetter
 from test_spam import detect_spam
 from utils import split_sentences
 
+from lib.pyModels import TextCleaner, NumericFeatures # NOTE: DO NOT REMOVE THIS!!! SPAM WILL NOT WORK OTHERWISE
+
 app = Flask(__name__)
 CORS(app)
 
@@ -28,4 +30,5 @@ def index():
     
     return jsonify(results)
 
-app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
