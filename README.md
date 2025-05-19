@@ -32,6 +32,8 @@
 ---
 
 ## Project Structure
+
+```
 .
 ├── app.py
 ├── spam_classifier.py
@@ -55,6 +57,7 @@
 │   └── ... (virtual environment files and folders)
 ├── requirements.txt
 └── README.md
+```
 
 ## Authors ## 
 Joven Carl Rex Biaca
