@@ -14,7 +14,7 @@ app = Flask(__name__)
 CORS(app)
 
 @app.route('/', methods=['POST'])
-@cross_origin(origin='http://localhost:3000')
+@cross_origin(origin='https://nlp-final-project.vercel.app')
 def index():
     data = request.json
     text, use_spam, use_toxicity, use_sentiment = itemgetter('text', 'useSpam', 'useToxicity', 'useSentiment')(data)
