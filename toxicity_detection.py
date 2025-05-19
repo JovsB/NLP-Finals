@@ -34,6 +34,8 @@ def detect_toxicity(sentences: list[str]):
             
             if not result.get('is_toxic'):
                 result['is_toxic'] = bool(pred)
+                
+        result['text'] = sentence
             
         results.append(result)
         

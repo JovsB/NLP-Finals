@@ -22,6 +22,8 @@ def index():
     sentences = split_sentences(text)
     results = {}
     
+    results.update({ 'sentences': sentences })
+    
     if use_spam:
         spam_results, spam_count = detect_spam(sentences)
         results.update({
