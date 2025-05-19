@@ -8,14 +8,17 @@ from sentiment_analysis import analyze_sentiment, download_nltk_resources
 
 from utils import split_sentences
 
-from lib.pyModels import TextCleaner, NumericFeatures # NOTE: DO NOT REMOVE THIS!!! SPAM WILL NOT WORK OTHERWISE
 
 app = Flask(__name__)
 CORS(app)
 
+download_nltk_resources()
+
 @app.route('/', methods=['POST'])
 @cross_origin(origin='https://nlp-final-project.vercel.app')
 def index():
+    from lib.pyModels import TextCleaner, NumericFeatures # NOTE: DO NOT REMOVE THIS!!! SPAM WILL NOT WORK OTHERWISE
+    
     data = request.json
     text, use_spam, use_toxicity, use_sentiment = itemgetter('text', 'useSpam', 'useToxicity', 'useSentiment')(data)
     
@@ -54,5 +57,4 @@ def index():
     return jsonify(results)
 
 if __name__ == '__main__':
-    download_nltk_resources()
     app.run(debug=True)
