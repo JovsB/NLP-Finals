@@ -32,6 +32,29 @@
 ---
 
 ## Project Structure
+.
+├── app.py
+├── spam_classifier.py
+├── sentiment_analysis.py
+├── toxicity_detection.py
+├── utils.py
+├── dataset/
+│   ├── spam.csv
+│   └── toxicity.csv
+├── models/
+│   ├── full_spam_pipeline.joblib
+│   ├── sentiment_model_nltk_reviews.joblib
+│   └── toxicity_model.joblib
+├── lib/
+│   └── pyModels.py
+├── static/
+│   └── style.css
+├── templates/
+│   └── index.html
+├── .venv/
+│   └── ... (virtual environment files and folders)
+├── requirements.txt
+└── README.md
 
 ## Authors ## 
 Joven Carl Rex Biaca
